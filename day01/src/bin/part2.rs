@@ -16,66 +16,50 @@ pub fn process(input: &str) -> anyhow::Result<u32> {
 }
 
 fn process_line(line: &str) -> u32 {
-    let mut index = 0;
-    // The from_fn is an iterator, from the official doc:
-    // Creates a new iterator where each iteration calls the provided closure
-    // https://doc.rust-lang.org/std/iter/fn.from_fn.html
-    let line_iter = std::iter::from_fn(move || {
-        // For each iteration we take the string from index to its end
+    let mut it = (0..line.len()).filter_map(|index| {
+        // For each iteration we take the substring from index to the end
         let reduced_line = &line[index..];
 
-        // Hard coded solution, verifies if the string we have starts
-        // with a certain pattern, if so we return a char value to substitute
+        // Hard coded solution, verifies if the substring we have starts
+        // with a certain pattern, if so then we return a char value to substitute
         // the first char of the substring we were analyzing
         let result = if reduced_line.starts_with("one") {
-            Some('1')
+            '1'
         } else if reduced_line.starts_with("two") {
-            Some('2')
+            '2'
         } else if reduced_line.starts_with("three") {
-            Some('3')
+            '3'
         } else if reduced_line.starts_with("four") {
-            Some('4')
+            '4'
         } else if reduced_line.starts_with("five") {
-            Some('5')
+            '5'
         } else if reduced_line.starts_with("six") {
-            Some('6')
+            '6'
         } else if reduced_line.starts_with("seven") {
-            Some('7')
+            '7'
         } else if reduced_line.starts_with("eight") {
-            Some('8')
+            '8'
         } else if reduced_line.starts_with("nine") {
-            Some('9')
+            '9'
         } else {
-            let result = reduced_line.chars().next();
-            result
+            reduced_line.chars().next().unwrap()
         };
 
-        index += 1;
-        result
+        result.to_digit(10)
     });
 
-    // At this point we will have converted every possible spelled number's
+    // At this point we have converted every possible spelled number's
     // first letter with the number it tells (for example 1ne for one).
     // We can now analyze the string the same way we were doing in part 1
 
-    // Read every line char by char and returns only the digits converted to u32
-    let mut it = line_iter.filter_map(|character| {
-        // Convert every char to digit
-        // Returns None if the char is not convertable given the radix
-        // for example: assert_eq!('f'.to_digit(10), None);
-        // but assert_eq!('f'.to_digit(16), Some(15));
-        character.to_digit(10)
-    });
-    // .next returns the next item in the array, in this case the first one
     let first = it.next().expect("should be a number");
-    // returns the last item in the array
-    let last = it.last();
 
-    match last {
-        Some(num) => format!("{first}{num}").parse::<u32>(),
-        // If there is only one number, we double it
-        None => format!("{first}{first}").parse::<u32>(),
-    }.expect("should be a valid number")
+    match it.last() {
+        Some(num) => format!("{first}{num}"),
+        None => format!("{first}{first}"),
+    }
+    .parse::<u32>()
+    .expect("should be a valid number")
 }
 
 #[cfg(test)]
