@@ -11,7 +11,7 @@ enum Value {
 
 #[tracing::instrument]
 pub fn process(input: &str) -> anyhow::Result<u32> {
-    // sum part numbers
+// sum part numbers
     let map = input
         .lines()
         .enumerate()
@@ -19,12 +19,14 @@ pub fn process(input: &str) -> anyhow::Result<u32> {
             line.chars().enumerate().map(
                 move |(x, character)| {
                     (
-                        (y as i32, x as i32),
+                        (y as i32,x as i32),
                         match character {
                             '.' => Value::Empty,
                             c if c.is_ascii_digit() => {
                                 Value::Number(
-                                    c.to_digit(10).expect("should be a number"),
+                                    c.to_digit(10).expect(
+                                        "should be a number",
+                                    ),
                                 )
                             }
                             c => Value::Symbol(c),
@@ -32,7 +34,8 @@ pub fn process(input: &str) -> anyhow::Result<u32> {
                     )
                 },
             )
-        }).collect::<BTreeMap<(i32, i32), Value>>();
+        })
+        .collect::<BTreeMap<(i32, i32), Value>>();
 
     let mut numbers: Vec<Vec<((i32, i32), u32)>> = vec![];
     for ((y, x), value) in map.iter() {
@@ -47,28 +50,33 @@ pub fn process(input: &str) -> anyhow::Result<u32> {
                                     .iter_mut()
                                     .last()
                                     .expect("should exist");
-
                                 last.push(((*x, *y), *num));
                             } else {
                                 numbers.push(vec![(
                                     (*x, *y),
-                                    *num
+                                    *num,
                                 )]);
                             }
-                        },
-                        None => unimplemented!("should not happen")
+                        }
+                        None => unimplemented!(
+                            "shouldn't happen"
+                        ),
                     }
-                },
+                }
                 None => {
-                    numbers.push(vec![((*x, *y), *num)])
+                    numbers.push(vec![((*x, *y), *num)]);
                 }
             }
         }
     }
 
+    // map: entire grid
+    // numbers: sequential numbers
     let mut total = 0;
-    for num_list in numbers {
-        // (x, y)
+    for symbol in map.iter().filter(|(_key, value)| {
+        matches!(value, Value::Symbol('*'))
+    }) {
+        // (x,y)
         let positions = [
             (1, 0),
             (1, -1),
@@ -79,42 +87,48 @@ pub fn process(input: &str) -> anyhow::Result<u32> {
             (0, 1),
             (1, 1),
         ];
-        let num_positions: Vec<(i32, i32)> = num_list
+        let pos_to_check: Vec<(i32, i32)> = positions
             .iter()
-            .map(|((y, x), _)| (*x, *y))
-            .collect();
-        let pos_to_check: Vec<(i32, i32)> = num_list
-            .iter()
-            .flat_map(|(pos, _)| {
-                positions.iter().map(|outer_pos| {
-                    // outer_pos.x + pos.x, outer_pos.y + pos.y
-                    (
-                        outer_pos.0 + pos.1,
-                        outer_pos.1 + pos.0
-                    )
-                })
+            .map(|outer_pos| {
+                // outer_pos.x + pos.x, .y + .y
+                (
+                    outer_pos.0 + symbol.0 .1,
+                    outer_pos.1 + symbol.0 .0,
+                )
             })
-            .unique()
-            .filter(|num| !num_positions.contains(num))
             .collect();
 
-        let is_part_number = pos_to_check.iter().any(|pos| {
-            let value = map.get(pos);
-            #[allow(clippy::match_like_matches_macro)]
-            if let Some(Value::Symbol(_)) = value {
-                true
-            } else {
-                false
-            }
-        });
+        // dbg!(pos_to_check.len(), pos_to_check);
+        let mut indexes_of_numbers = vec![];
 
-        if is_part_number {
-            total += num_list
+        for pos in pos_to_check {
+            for (i, num_list) in numbers.iter().enumerate()
+            {
+                if num_list
+                    .iter()
+                    .any(|(num_pos, _)| num_pos == &pos)
+                {
+                    indexes_of_numbers.push(i);
+                }
+            }
+        }
+
+        let is_gear =
+            indexes_of_numbers.iter().unique().count() == 2;
+
+        if is_gear {
+            total += indexes_of_numbers
                 .iter()
-                .map(|(_, num)| num.to_string())
-                .collect::<String>()
-                .parse::<u32>()
-                .unwrap()
+                .unique()
+                .map(|index| {
+                    numbers[*index]
+                        .iter()
+                        .map(|(_, num)| num.to_string())
+                        .collect::<String>()
+                        .parse::<u32>()
+                        .unwrap()
+                })
+                .product::<u32>();
         }
     }
 
